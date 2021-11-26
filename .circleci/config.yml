@@ -1,0 +1,108 @@
+version: 2.1
+
+orbs:
+  swissknife: roopakv/swissknife@0.37.0
+
+jobs:
+  checkout:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: medium
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - persist_to_workspace:
+          root: ~/repo
+          paths:
+            - .
+
+  test_backend:
+    docker:
+      - image: circleci/openjdk:11-jdk
+    working_directory: ~/repo
+    parameters:
+      dir:
+        type: string
+        description: The directory to run tests for.
+    steps:
+      - attach_workspace:
+          at: ~/repo
+      - swissknife/sk-checkout:
+          swissknife_sha: << pipeline.parameters.swissknife_sha >>
+      - run:
+          name: Run tests
+          command: |
+            cd << parameters.dir >>
+            ./gradlew clean build
+
+  test_frontend:
+    docker:
+      - image: circleci/node:12
+    working_directory: ~/repo
+    parameters:
+      dir:
+        type: string
+        description: The directory to run tests for.
+    steps:
+      - attach_workspace:
+          at: ~/repo
+      - swissknife/sk-checkout:
+          swissknife_sha: << pipeline.parameters.swissknife_sha >>
+      - run:
+          name: Run tests
+          command: |
+            cd << parameters.dir >>
+            npm run build
+
+  trigger-needed-workflows:
+    docker:
+      - image: circleci/node:12
+    working_directory: ~/repo
+    steps:
+      - attach_workspace:
+          at: ~/repo
+      - swissknife/trigger-workflows-for-all-modified:
+          base-branch: main
+          run-mode-for-base-branch: run_for_last_commit
+          use-divergence-point: true
+          code-param-name-map: '
+            [
+              {"regex": "^(frontend).*", "param_name": "run_client_workflow"},
+              {"regex": "^(backend).*", "param_name": "run_server_workflow"},
+            ]'
+          additional-param-map: '{"run_trigger_workflow": false}'
+          use-swissknife-sha: true
+
+workflows:
+  client-tests:
+    when: << pipeline.parameters.run_server_workflow >>
+    jobs:
+      - test_backend:
+          dir: backend
+          name: 'Backend tests'
+
+  server-tests:
+    when: << pipeline.parameters.run_client_workflow >>
+    jobs:
+      - test_frontend:
+          dir: frontend
+          name: 'Frontend tests'
+
+  trigger-needed-workflows:
+    when: << pipeline.parameters.run_trigger_workflow >>
+    jobs:
+      - trigger-needed-workflows
+
+parameters:
+  run_client_workflow:
+    default: false
+    type: boolean
+  run_server_workflow:
+    default: false
+    type: boolean
+  run_trigger_workflow:
+    default: true
+    type: boolean
+  swissknife_sha:
+    default: ""
+    type: string
