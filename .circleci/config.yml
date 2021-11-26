@@ -60,6 +60,8 @@ jobs:
       - image: circleci/node:12
     working_directory: ~/repo
     steps:
+      - attach_workspace:
+          at: ~/repo
       - swissknife/trigger-workflows-for-all-modified:
           base-branch: main
           run-mode-for-base-branch: run_for_last_commit
