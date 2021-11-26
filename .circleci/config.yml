@@ -52,6 +52,7 @@ jobs:
           name: Run tests
           command: |
             cd << parameters.dir >>
+            npm install
             npm run build
 
   trigger-needed-workflows:
@@ -74,14 +75,14 @@ jobs:
           use-swissknife-sha: true
 
 workflows:
-  client-tests:
+  backend-tests:
     when: << pipeline.parameters.run_server_workflow >>
     jobs:
       - test_backend:
           dir: backend
           name: 'Backend tests'
 
-  server-tests:
+  frontend-tests:
     when: << pipeline.parameters.run_client_workflow >>
     jobs:
       - test_frontend:
