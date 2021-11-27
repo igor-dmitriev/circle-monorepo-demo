@@ -64,8 +64,7 @@ jobs:
           at: ~/repo
       - swissknife/trigger-workflows-for-all-modified:
           base-branch: main
-          run-mode-for-base-branch: run_for_last_commit
-          use-divergence-point: true
+          run-mode-for-base-branch: run_all
           code-param-name-map:
             '[
               {"regex": "^(frontend).*", "param_name": "run_client_workflow"},
